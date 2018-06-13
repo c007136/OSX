@@ -29,20 +29,6 @@ string &replace_all(string&   str,const   string&   old_value,const   string&   
 
 int main(int argc, char** argv)
 {
-//    Json::Value json;
-//    json["\"name\""] = "\"value\"";
-//    //json["小旺机器人"] = "0401你好2";
-//    //json["小旺机器人"] = "0401你好3";
-//
-//    //string s = "{""\"小旺机器人\"" ":" "\"0401你好1\"""}";
-//    string s = json.toStyledString();
-//    replace_all(s, "\n", "");
-//    replace_all(s, "\t", "");
-//    replace_all(s, " ", "");
-//    std::cout << s << std::endl;
-//
-//    return 0;
-    
     int    listenfd, connfd;
     struct sockaddr_in     servaddr;
     char   buff[4096];
@@ -76,7 +62,6 @@ int main(int argc, char** argv)
         }
         
         Json::Value json;
-        //json["\"小旺机器人\""] = "\"0401你好1\"";
         json["小旺机器人"] = "0401你好2444";
         
         string s = json.toStyledString();
