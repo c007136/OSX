@@ -32,11 +32,19 @@ int customFunctionDemo(void);
 
 int aggregateFunctionDemo(void);
 
+int collationRuleDemo(void);
+
+int busyHandleDemo(void);
+
 
 int main(int argc, const char * argv[])
 {
-    return aggregateFunctionDemo();
+    return busyHandleDemo();
     
+//    return collationRuleDemo();
+//
+//    return aggregateFunctionDemo();
+//
 //    return customFunctionDemo();
 //
 //    return authorizerFunctionDemo();
@@ -647,10 +655,10 @@ void str_agg_finalize(sqlite3_context *ctx)
     }
 }
 
+// season相同的row，拼接之name
 int aggregateFunctionDemo(void)
 {
     sqlite3 *db;
-    
     int rc = sqlite3_open("foods.db", &db);
     if (rc) {
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
@@ -665,6 +673,105 @@ int aggregateFunctionDemo(void)
     fprintf(stdout, "Running query: \n");
     char *sql = "select season, str_agg(name) from episodes group by season";
     print_sql_result(db, sql);
+    
+    sqlite3_close(db);
+    
+    return 0;
+}
+
+int length_first_collation(void *data, int l1, const void *s1, int l2, const void *s2)
+{
+    int result = 0;
+    int opinion = 0;
+    const char *ss1 = (const char *)s1;
+    const char *ss2 = (const char *)s2;
+    
+    if (l1 == l2) result = 0;
+    if (l1 < l2) result = 1;
+    if (l1 > l2) result = 2;
+    
+    switch (result) {
+        case 1:
+            opinion = result;
+            break;
+        case 2:
+            opinion = -result;
+        default:
+            opinion = strcmp(ss1, ss2);
+            break;
+    }
+    
+    return opinion;
+}
+
+// 跟预想中的排序规则不一致
+int collationRuleDemo(void)
+{
+    sqlite3 *db;
+    char *sql;
+    
+    int rc = sqlite3_open("foods.db", &db);
+    if (rc) {
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return -1;
+    }
+    
+    fprintf(stdout, "Registering length_first function.\n");
+    sqlite3_create_collation(db, "Length_First", SQLITE_UTF8, NULL, length_first_collation);
+    
+    fprintf(stdout, "Select records using default collation: \n");
+    sql = "select name from foods order by name limit 20";
+    print_sql_result(db, sql);
+    
+    fprintf(stdout, "\nSelect records using length_first collation: \n");
+    sql = "select name from foods order by name collate Length_First limit 20";
+    print_sql_result(db, sql);
+    
+    sqlite3_close(db);
+    
+    return 0;
+}
+
+int callback(void* data, int ncols, char** values, char** headers)
+{
+    int i;
+    fprintf(stderr, "%s: ", (const char*)data);
+    for(i=0; i < ncols; i++) {
+        fprintf(stderr, "%s=%s ", headers[i], values[i]);
+    }
+    
+    fprintf(stderr, "\n");
+    return 0;
+}
+
+// 重看书的时候，来看这个demo
+int busyHandleDemo(void)
+{
+    sqlite3 *db;
+    char *sql;
+    char *zErr;
+    
+    int rc = sqlite3_open("test.db", &db);
+    if (rc) {
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return -1;
+    }
+    
+    // 60s
+    sqlite3_busy_timeout(db, 60000);
+    
+    char *data = "Callback function called";
+    sql = "insert into episodes (name, cid) values ('Muyu', 1); select * from episodes;";
+    
+    rc = sqlite3_exec(db, sql, callback, data, &zErr);
+    if (rc != SQLITE_OK) {
+        if (zErr != NULL) {
+            fprintf(stderr, "SQL Error : %s\n", zErr);
+            sqlite3_free(zErr);
+        }
+    }
     
     sqlite3_close(db);
     
