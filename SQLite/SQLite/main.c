@@ -39,7 +39,7 @@ int busyHandleDemo(void);
 
 int main(int argc, const char * argv[])
 {
-    return busyHandleDemo();
+    return queryParameterDemo();
     
 //    return collationRuleDemo();
 //
@@ -328,10 +328,11 @@ int prepareFunctionDemo1(void)
     return 0;
 }
 
+// 可以试试位置绑定从2开始，结果会是如何
 int test_positional_params(sqlite3 *db)
 {
     sqlite3_stmt *stmt;
-    const char *sql = "insert into food (id, cid, name) values (?, ?, 'muyu');";
+    const char *sql = "insert into food (id, cid, name) values (?, ?, ?);";
     int rc = sqlite3_prepare(db, sql, (int)strlen(sql), &stmt, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: %s\n", sqlite3_errmsg(db));
@@ -339,6 +340,7 @@ int test_positional_params(sqlite3 *db)
     
     sqlite3_bind_int(stmt, 1, 10);
     sqlite3_bind_int(stmt, 2, 20);
+    sqlite3_bind_text(stmt, 3, "muyu", -1, SQLITE_STATIC);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     
@@ -349,14 +351,15 @@ int test_numbered_params(sqlite3 *db)
 {
     sqlite3_stmt *stmt;
     char *name = "MuYu";
-    const char *sql = "insert into food (id, cid, name) values (?100, ?100, ?101);";
+    const char *sql = "insert into food (id, cid, name) values (?100, ?200, ?300);";
     int rc = sqlite3_prepare(db, sql, (int)strlen(sql), &stmt, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: %s\n", sqlite3_errmsg(db));
     }
     
     sqlite3_bind_int(stmt, 100, 10);
-    sqlite3_bind_text(stmt, 101, name, (int)strlen(name), SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 200, 20);
+    sqlite3_bind_text(stmt, 300, name, -1, SQLITE_STATIC);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     
@@ -372,19 +375,27 @@ int test_named_params(sqlite3 *db)
 {
     sqlite3_stmt *stmt;
     char *name = "Muyu";
-    const char *sql = "insert into food (id, cid, name) values (:cosmo,:cosmo,:newman);";
+    const char *sql = "insert into food (id, cid, name) values (:id, :cid, :name);";
     int rc = sqlite3_prepare(db, sql, (int)strlen(sql), &stmt, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: %s\n", sqlite3_errmsg(db));
     }
     
-    int index = sqlite3_bind_parameter_index(stmt, ":cosmo");
+    int index = sqlite3_bind_parameter_index(stmt, ":id");
     rc = sqlite3_bind_int(stmt, index, 10);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: %s\n", sqlite3_errmsg(db));
     }
-    index = sqlite3_bind_parameter_index(stmt, ":newman");
-    rc = sqlite3_bind_text(stmt, index, name, (int)strlen(name), cleanup_fn);
+    
+    index = sqlite3_bind_parameter_index(stmt, ":cid");
+    rc = sqlite3_bind_int(stmt, index, 20);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: %s\n", sqlite3_errmsg(db));
+    }
+    
+    index = sqlite3_bind_parameter_index(stmt, ":name");
+    //rc = sqlite3_bind_text(stmt, index, name, (int)strlen(name), cleanup_fn);
+    rc = sqlite3_bind_text(stmt, index, name, (int)strlen(name), SQLITE_STATIC);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: %s\n", sqlite3_errmsg(db));
     }
@@ -413,21 +424,21 @@ int queryParameterDemo(void)
     fprintf(stdout, "Test Positional Parameters\n");
     execute(db, "delete from food;");
     
-    // Positional Parameters
-    if (test_positional_params(db) != SQLITE_OK) {
-        goto end;
-    }
-    print_sql_result(db, "select * from food");
-    fprintf(stdout, "\n");
+//    // Positional Parameters
+//    if (test_positional_params(db) != SQLITE_OK) {
+//        goto end;
+//    }
+//    print_sql_result(db, "select * from food");
+//    fprintf(stdout, "\n");
     
-    // Numbered Parameters
-    fprintf(stdout, "Test Numbered Parameters\n");
-    execute(db, "delete from food");
-    if(test_numbered_params(db) != SQLITE_OK) {
-        goto end;
-    }
-    print_sql_result(db, "select * from food");
-    fprintf(stdout, "\n");
+//    // Numbered Parameters
+//    fprintf(stdout, "Test Numbered Parameters\n");
+//    execute(db, "delete from food");
+//    if(test_numbered_params(db) != SQLITE_OK) {
+//        goto end;
+//    }
+//    print_sql_result(db, "select * from food");
+//    fprintf(stdout, "\n");
     
     // Named Parameters
     fprintf(stdout, "Test Named Parameters\n");
